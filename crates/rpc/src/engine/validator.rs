@@ -12,6 +12,7 @@ use kasplex_reth_primitives::{
     engine::{KasplexEngineTypes, types::KasplexExecutionData},
     payload::attributes::KasplexPayloadAttributes,
 };
+use alloy_consensus::constants::EMPTY_WITHDRAWALS;
 use alloy_rpc_types_engine::PayloadError;
 use reth::primitives::RecoveredBlock;
 use reth_engine_primitives::EngineApiValidator;
@@ -31,7 +32,7 @@ use reth_payload_primitives::{
 };
 use reth_primitives_traits::Block as BlockTrait;
 use std::sync::Arc;
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 
 /// Builder for [`KasplexEngineValidator`].
 #[derive(Debug, Default, Clone)]
@@ -119,18 +120,59 @@ where
         payload: Types::ExecutionData,
     ) -> Result<RecoveredBlock<Self::Block>, NewPayloadError> {
         let alloy_rpc_types_engine::ExecutionData { payload, sidecar: _ } = payload;
-        
-        // Extract expected hash from payload first, before moving payload
+
+        // Extract expected hash and debug info from payload first, before moving payload
         // Only V1 has block_hash field
-        let expected_hash = match &payload {
-            alloy_rpc_types_engine::ExecutionPayload::V1(p) => p.block_hash,
+        let (expected_hash, payload_for_debug) = match &payload {
+            alloy_rpc_types_engine::ExecutionPayload::V1(p) => {
+                // Extract debug info before moving
+                let debug_info = (
+                    p.block_number,
+                    p.parent_hash,
+                    p.fee_recipient,
+                    p.state_root,
+                    p.receipts_root,
+                    p.logs_bloom,
+                    p.prev_randao,
+                    p.gas_limit,
+                    p.gas_used,
+                    p.timestamp,
+                    p.extra_data.clone(),
+                    p.base_fee_per_gas,
+                    p.block_hash,
+                    p.transactions.len(),
+                );
+                (p.block_hash, Some(debug_info))
+            }
             _ => {
                 // For V2/V3, we don't have block_hash in the payload
                 // We'll compute it from the block after processing
-                alloy_primitives::B256::ZERO // Placeholder, will be replaced
+                (alloy_primitives::B256::ZERO, None) // Placeholder, will be replaced
             }
         };
-        
+
+        // Debug: Log payload fields before conversion
+        if let Some((block_number, parent_hash, fee_recipient, state_root, receipts_root, logs_bloom, prev_randao, gas_limit, gas_used, timestamp, ref extra_data, base_fee_per_gas, block_hash, tx_count)) = payload_for_debug {
+            debug!(
+                target: "rpc::engine::kasplex",
+                block_number,
+                ?parent_hash,
+                ?fee_recipient,
+                ?state_root,
+                ?receipts_root,
+                ?logs_bloom,
+                ?prev_randao,
+                gas_limit,
+                gas_used,
+                timestamp,
+                ?extra_data,
+                ?base_fee_per_gas,
+                ?block_hash,
+                transactions_count = tx_count,
+                "Payload fields before conversion"
+            );
+        }
+
         // Process Kasplex execution data - transaction numbers are stored in TxMapping
         // when transactions are submitted via RPC
         let block = process_kasplex_execution_data(payload, None)
@@ -144,6 +186,28 @@ where
         let sealed_block = block.seal_slow();
         let block_hash = sealed_block.hash();
 
+        // Debug: Log block fields after conversion
+        debug!(
+            target: "rpc::engine::kasplex",
+            block_number = sealed_block.number,
+            parent_hash = ?sealed_block.parent_hash,
+            beneficiary = ?sealed_block.beneficiary,
+            state_root = ?sealed_block.state_root,
+            receipts_root = ?sealed_block.receipts_root,
+            logs_bloom = ?sealed_block.logs_bloom,
+            prev_randao = ?sealed_block.mix_hash,
+            gas_limit = sealed_block.gas_limit,
+            gas_used = sealed_block.gas_used,
+            timestamp = sealed_block.timestamp,
+            extra_data = ?sealed_block.extra_data,
+            base_fee_per_gas = ?sealed_block.base_fee_per_gas,
+            transactions_root = ?sealed_block.transactions_root,
+            withdrawals_root = ?sealed_block.withdrawals_root,
+            ommers_hash = ?sealed_block.ommers_hash,
+            computed_hash = ?block_hash,
+            "Block fields after conversion"
+        );
+
         // For V2/V3, use the computed block hash
         let expected_hash = if expected_hash.is_zero() {
             block_hash
@@ -153,6 +217,51 @@ where
 
         // Ensure the hash included in the payload matches the block hash
         if expected_hash != block_hash {
+            warn!(
+                target: "rpc::engine::kasplex",
+                expected_hash = ?expected_hash,
+                computed_hash = ?block_hash,
+                block_number = sealed_block.number,
+                "Hash mismatch - comparing field by field"
+            );
+
+            // Compare individual fields to find the mismatch
+            if let Some((_, parent_hash, fee_recipient, state_root, receipts_root, logs_bloom, prev_randao, gas_limit, gas_used, timestamp, ref extra_data, base_fee_per_gas, _, _)) = payload_for_debug {
+                if parent_hash != sealed_block.parent_hash {
+                    warn!(target: "rpc::engine::kasplex", "parent_hash mismatch: payload={:?}, block={:?}", parent_hash, sealed_block.parent_hash);
+                }
+                if fee_recipient != sealed_block.beneficiary {
+                    warn!(target: "rpc::engine::kasplex", "fee_recipient/beneficiary mismatch: payload={:?}, block={:?}", fee_recipient, sealed_block.beneficiary);
+                }
+                if state_root != sealed_block.state_root {
+                    warn!(target: "rpc::engine::kasplex", "state_root mismatch: payload={:?}, block={:?}", state_root, sealed_block.state_root);
+                }
+                if receipts_root != sealed_block.receipts_root {
+                    warn!(target: "rpc::engine::kasplex", "receipts_root mismatch: payload={:?}, block={:?}", receipts_root, sealed_block.receipts_root);
+                }
+                if logs_bloom != sealed_block.logs_bloom {
+                    warn!(target: "rpc::engine::kasplex", "logs_bloom mismatch");
+                }
+                if prev_randao != sealed_block.mix_hash {
+                    warn!(target: "rpc::engine::kasplex", "prev_randao/mix_hash mismatch: payload={:?}, block={:?}", prev_randao, sealed_block.mix_hash);
+                }
+                if gas_limit != sealed_block.gas_limit {
+                    warn!(target: "rpc::engine::kasplex", "gas_limit mismatch: payload={}, block={}", gas_limit, sealed_block.gas_limit);
+                }
+                if gas_used != sealed_block.gas_used {
+                    warn!(target: "rpc::engine::kasplex", "gas_used mismatch: payload={}, block={}", gas_used, sealed_block.gas_used);
+                }
+                if timestamp != sealed_block.timestamp {
+                    warn!(target: "rpc::engine::kasplex", "timestamp mismatch: payload={}, block={}", timestamp, sealed_block.timestamp);
+                }
+                if *extra_data != sealed_block.extra_data {
+                    warn!(target: "rpc::engine::kasplex", "extra_data mismatch: payload={:?}, block={:?}", extra_data, sealed_block.extra_data);
+                }
+                if base_fee_per_gas.to::<u64>() != sealed_block.base_fee_per_gas.unwrap_or(0) {
+                    warn!(target: "rpc::engine::kasplex", "base_fee_per_gas mismatch: payload={:?}, block={:?}", base_fee_per_gas, sealed_block.base_fee_per_gas);
+                }
+            }
+
             return Err(PayloadError::BlockHash {
                 execution: sealed_block.hash(),
                 consensus: expected_hash,
@@ -221,7 +330,14 @@ pub fn process_kasplex_execution_data(
         alloy_rpc_types_engine::ExecutionPayload::V1(p) => p,
         _ => return Err(PayloadError::BaseFee(alloy_primitives::U256::ZERO)),
     };
-    let block: Block = payload_v1.try_into_block()?;
+    let mut block: Block = payload_v1.try_into_block()?;
+    
+    // Fix withdrawals_root for Kasplex blocks
+    // Kasplex blocks should have withdrawals_root set to EMPTY_WITHDRAWALS
+    // This is required for correct hash calculation to match geth
+    if block.header.withdrawals_root.is_none() {
+        block.header.withdrawals_root = Some(EMPTY_WITHDRAWALS);
+    }
     
     // If we have Kasplex execution data with numbers, restore them
     if let Some(kasplex_data) = kasplex_data {
