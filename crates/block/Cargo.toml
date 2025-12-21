@@ -1,0 +1,32 @@
+[package]
+name = "kasplex-reth-block"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+kasplex-reth-chainspec = { path = "../chainspec" }
+kasplex-reth-evm = { path = "../evm" }
+alloy-consensus = { workspace = true }
+alloy-eips = { workspace = true }
+alloy-evm = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-rpc-types-eth = { workspace = true }
+alloy-rpc-types-engine = { workspace = true }
+eyre = { workspace = true }
+reth = { workspace = true }
+reth-ethereum = { workspace = true }
+reth-evm = { workspace = true, features = ["std"] }
+reth-evm-ethereum = { workspace = true }
+reth-node-api = { workspace = true }
+reth-node-builder = { workspace = true }
+reth-primitives-traits = { workspace = true }
+reth-provider = { workspace = true }
+reth-revm = { workspace = true }
+revm-database-interface = { workspace = true }
+rayon = "1.8"
+

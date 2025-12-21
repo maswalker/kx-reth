@@ -1,0 +1,30 @@
+[package]
+name = "kasplex-reth-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+kasplex-reth-consensus = { path = "../consensus" }
+kasplex-reth-node = { path = "../node" }
+reth = { workspace = true }
+reth-cli = { workspace = true }
+reth-cli-commands = { workspace = true }
+reth-cli-util = { workspace = true }
+reth-node-builder = { workspace = true }
+reth-tracing = { workspace = true }
+tracing = { workspace = true }
+clap = { workspace = true }
+eyre = { workspace = true }
+alloy-consensus = { workspace = true }
+reth-db = { workspace = true }
+reth-ethereum-forks = { workspace = true }
+reth-node-api = { workspace = true }
+reth-ethereum = { workspace = true }
+reth-storage-api = { workspace = true }
+reth-node-ethereum = { workspace = true }
+

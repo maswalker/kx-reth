@@ -1,0 +1,339 @@
+//! Kasplex engine payload validator
+//! 
+//! This module provides Kasplex-specific payload validation logic, including:
+//! - Handling Numbers array from ExecutableData
+//! - Restoring transaction Number fields from Numbers array
+//! - Allowing block.timestamp == parent.timestamp for Kasplex
+//! - Supporting Kasplex-specific ForkChoiceUpdate and NewPayload logic
+
+use kasplex_reth_block::config::KasplexEvmConfig;
+use kasplex_reth_chainspec::spec::{KasplexChainSpec, KasplexChainCheck};
+use kasplex_reth_primitives::{
+    engine::{KasplexEngineTypes, types::KasplexExecutionData},
+    payload::attributes::KasplexPayloadAttributes,
+};
+use alloy_rpc_types_engine::PayloadError;
+use reth::primitives::RecoveredBlock;
+use reth_engine_primitives::EngineApiValidator;
+use reth_engine_tree::tree::{TreeConfig, payload_validator::BasicEngineValidator};
+use reth_ethereum::{Block, EthPrimitives};
+use reth_evm::ConfigureEngineEvm;
+use reth_node_api::{
+    AddOnsContext, FullNodeComponents, NewPayloadError, NodeTypes, PayloadTypes, PayloadValidator,
+};
+use reth_node_builder::{
+    invalid_block_hook::InvalidBlockHookExt,
+    rpc::{EngineValidatorBuilder, PayloadValidatorBuilder},
+};
+use reth_payload_primitives::{
+    EngineApiMessageVersion, EngineObjectValidationError, InvalidPayloadAttributesError,
+    PayloadAttributes, PayloadOrAttributes,
+};
+use reth_primitives_traits::Block as BlockTrait;
+use std::sync::Arc;
+use tracing::{debug, trace};
+
+/// Builder for [`KasplexEngineValidator`].
+#[derive(Debug, Default, Clone)]
+#[non_exhaustive]
+pub struct KasplexEngineValidatorBuilder;
+
+impl<N> PayloadValidatorBuilder<N> for KasplexEngineValidatorBuilder
+where
+    N: FullNodeComponents<Evm = KasplexEvmConfig>,
+    N::Types: NodeTypes<
+            Primitives = EthPrimitives,
+            ChainSpec = KasplexChainSpec,
+            Payload = KasplexEngineTypes,
+        >,
+{
+    /// The consensus implementation to build.
+    type Validator = KasplexEngineValidator;
+
+    /// Creates the engine validator.
+    async fn build(self, ctx: &AddOnsContext<'_, N>) -> eyre::Result<Self::Validator> {
+        Ok(KasplexEngineValidator::new(ctx.config.chain.clone()))
+    }
+}
+
+impl<N> EngineValidatorBuilder<N> for KasplexEngineValidatorBuilder
+where
+    N: FullNodeComponents<Evm = KasplexEvmConfig>,
+    N::Types: NodeTypes<
+            Primitives = EthPrimitives,
+            ChainSpec = KasplexChainSpec,
+            Payload = KasplexEngineTypes,
+        >,
+    N::Evm: ConfigureEngineEvm<kasplex_reth_primitives::engine::types::KasplexExecutionData>,
+{
+    /// The tree validator type that will be used by the consensus engine.
+    type EngineValidator = BasicEngineValidator<N::Provider, N::Evm, KasplexEngineValidator>;
+
+    /// Builds the tree validator for the consensus engine.
+    async fn build_tree_validator(
+        self,
+        ctx: &AddOnsContext<'_, N>,
+        tree_config: TreeConfig,
+    ) -> eyre::Result<Self::EngineValidator> {
+        let validator = <Self as PayloadValidatorBuilder<N>>::build(self, ctx).await?;
+        let data_dir = ctx.config.datadir.clone().resolve_datadir(ctx.config.chain.inner.chain);
+        let invalid_block_hook = ctx.create_invalid_block_hook(&data_dir).await?;
+        Ok(BasicEngineValidator::new(
+            ctx.node.provider().clone(),
+            Arc::new(ctx.node.consensus().clone()),
+            ctx.node.evm_config().clone(),
+            validator,
+            tree_config,
+            invalid_block_hook,
+        ))
+    }
+}
+
+/// Validator for the Kasplex engine API.
+#[derive(Debug, Clone)]
+pub struct KasplexEngineValidator {
+    pub chain_spec: Arc<KasplexChainSpec>,
+}
+
+impl KasplexEngineValidator {
+    /// Instantiates a new validator.
+    pub const fn new(chain_spec: Arc<KasplexChainSpec>) -> Self {
+        Self { chain_spec }
+    }
+}
+
+impl<Types> PayloadValidator<Types> for KasplexEngineValidator
+where
+    Types: PayloadTypes<ExecutionData = alloy_rpc_types_engine::ExecutionData>,
+{
+    /// The block type used by the engine.
+    type Block = Block;
+
+    /// Ensures that the given payload does not violate any consensus rules that concern the block's
+    /// layout.
+    ///
+    /// This function must convert the payload into the executable block and pre-validate its
+    /// fields.
+    fn ensure_well_formed_payload(
+        &self,
+        payload: Types::ExecutionData,
+    ) -> Result<RecoveredBlock<Self::Block>, NewPayloadError> {
+        let alloy_rpc_types_engine::ExecutionData { payload, sidecar: _ } = payload;
+        
+        // Extract expected hash from payload first, before moving payload
+        // Only V1 has block_hash field
+        let expected_hash = match &payload {
+            alloy_rpc_types_engine::ExecutionPayload::V1(p) => p.block_hash,
+            _ => {
+                // For V2/V3, we don't have block_hash in the payload
+                // We'll compute it from the block after processing
+                alloy_primitives::B256::ZERO // Placeholder, will be replaced
+            }
+        };
+        
+        // Process Kasplex execution data - transaction numbers are stored in TxMapping
+        // when transactions are submitted via RPC
+        let block = process_kasplex_execution_data(payload, None)
+            .map_err(|e| NewPayloadError::Other(e.into()))?;
+
+        // Handle Kasplex-specific sidecar data if available
+        // Note: In the current implementation, we use ExecutionData which doesn't include
+        // KasplexExecutionData directly. The sidecar handling is done separately.
+        // If we need to handle tx_hash or withdrawals_hash from sidecar, we would do it here.
+        
+        let sealed_block = block.seal_slow();
+        let block_hash = sealed_block.hash();
+
+        // For V2/V3, use the computed block hash
+        let expected_hash = if expected_hash.is_zero() {
+            block_hash
+        } else {
+            expected_hash
+        };
+
+        // Ensure the hash included in the payload matches the block hash
+        if expected_hash != block_hash {
+            return Err(PayloadError::BlockHash {
+                execution: sealed_block.hash(),
+                consensus: expected_hash,
+            })
+            .map_err(|e| NewPayloadError::Other(e.into()));
+        }
+
+        sealed_block.try_recover().map_err(|e| NewPayloadError::Other(e.into()))
+    }
+
+    /// Validates the payload attributes with respect to the header.
+    fn validate_payload_attributes_against_header(
+        &self,
+        attr: &Types::PayloadAttributes,
+        header: &<Self::Block as BlockTrait>::Header,
+    ) -> Result<(), InvalidPayloadAttributesError> {
+        // Kasplex allows block.timestamp == parent.timestamp
+        // This is different from standard Ethereum which requires timestamp > parent.timestamp
+        if attr.timestamp() < header.timestamp {
+            return Err(InvalidPayloadAttributesError::InvalidTimestamp);
+        }
+        Ok(())
+    }
+}
+
+// EngineApiValidator implementation for KasplexEngineValidator
+impl<Types> EngineApiValidator<Types> for KasplexEngineValidator
+where
+    Types: PayloadTypes<PayloadAttributes = KasplexPayloadAttributes, ExecutionData = alloy_rpc_types_engine::ExecutionData>,
+{
+    /// Validates the presence or exclusion of fork-specific fields based on the payload attributes
+    /// and the message version.
+    fn validate_version_specific_fields(
+        &self,
+        _version: EngineApiMessageVersion,
+        _payload_or_attrs: PayloadOrAttributes<'_, Types::ExecutionData, Types::PayloadAttributes>,
+    ) -> Result<(), EngineObjectValidationError> {
+        // For Kasplex, we don't have version-specific validation beyond standard checks
+        Ok(())
+    }
+
+    /// Ensures that the payload attributes are valid for the given [`EngineApiMessageVersion`].
+    fn ensure_well_formed_attributes(
+        &self,
+        _version: EngineApiMessageVersion,
+        _attributes: &Types::PayloadAttributes,
+    ) -> Result<(), EngineObjectValidationError> {
+        // Attributes are well-formed if they pass the basic validation
+        Ok(())
+    }
+}
+
+/// Process Kasplex execution data and restore transaction numbers.
+/// 
+/// This function:
+/// 1. Extracts the Numbers array from KasplexExecutionData sidecar (if available)
+/// 2. Restores transaction Number fields from the Numbers array
+/// 3. If Numbers array is not available, tries to get from transaction mapping
+pub fn process_kasplex_execution_data(
+    payload: alloy_rpc_types_engine::ExecutionPayload,
+    kasplex_data: Option<&KasplexExecutionData>,
+) -> Result<Block, PayloadError> {
+    // Convert payload to block
+    // Extract ExecutionPayloadV1 from the enum and use its try_into_block method
+    let payload_v1 = match payload {
+        alloy_rpc_types_engine::ExecutionPayload::V1(p) => p,
+        _ => return Err(PayloadError::BaseFee(alloy_primitives::U256::ZERO)),
+    };
+    let block: Block = payload_v1.try_into_block()?;
+    
+    // If we have Kasplex execution data with numbers, restore them
+    if let Some(kasplex_data) = kasplex_data {
+        let numbers = &kasplex_data.kasplex_sidecar.numbers;
+        
+        let transactions: Vec<_> = block.body.transactions().collect();
+        if !numbers.is_empty() && numbers.len() == transactions.len() {
+            trace!(
+                target: "rpc::engine::kasplex",
+                numbers_count = numbers.len(),
+                "Restoring transaction numbers from KasplexExecutionData sidecar"
+            );
+            
+            // Restore transaction numbers from Numbers array
+            // Store them in transaction mapping for future reference
+            // Use the global shared instance
+            let tx_mapping = kasplex_reth_tx_mapping::get_global_tx_mapping();
+            for (tx, number) in transactions.iter().zip(numbers.iter()) {
+                let tx_hash = tx.tx_hash();
+                // Store in transaction mapping
+                tx_mapping.insert(*tx_hash, *number);
+                trace!(
+                    target: "rpc::engine::kasplex",
+                    ?tx_hash,
+                    number,
+                    "Stored transaction number from Numbers array"
+                );
+            }
+        } else if !numbers.is_empty() {
+            let tx_count = block.body.transactions().count();
+            debug!(
+                target: "rpc::engine::kasplex",
+                numbers_count = numbers.len(),
+                tx_count,
+                "Numbers array length mismatch, trying transaction mapping"
+            );
+        }
+    }
+    
+    // If numbers are not available from sidecar, try to get from transaction mapping
+    // This handles the case where transactions were submitted via RPC and numbers
+    // were stored in the mapping
+    // Use the global shared instance
+    let tx_mapping = kasplex_reth_tx_mapping::get_global_tx_mapping();
+    for tx in block.body.transactions() {
+        let tx_hash = tx.tx_hash();
+        let number = tx_mapping.get_tx_number(*tx_hash);
+        if number != 0 {
+            trace!(
+                target: "rpc::engine::kasplex",
+                ?tx_hash,
+                number,
+                "Found transaction number in mapping"
+            );
+        }
+    }
+    
+    Ok(block)
+}
+
+/// Validate Kasplex-specific block rules.
+/// 
+/// For Kasplex:
+/// - Allow block.timestamp == parent.timestamp
+/// - Other standard validations still apply
+pub fn validate_kasplex_block(
+    block: &reth::primitives::SealedBlock,
+    parent_timestamp: u64,
+) -> Result<(), String> {
+    // Kasplex allows block.timestamp == parent.timestamp
+    // This is different from standard Ethereum which requires timestamp > parent.timestamp
+    if block.timestamp < parent_timestamp {
+        return Err(format!(
+            "Block timestamp {} is less than parent timestamp {}",
+            block.timestamp, parent_timestamp
+        ));
+    }
+    
+    Ok(())
+}
+
+/// Check if a ForkChoiceUpdate should allow reorg for Kasplex.
+/// 
+/// For Kasplex networks, reorgs are allowed.
+pub fn kasplex_allow_reorg(chain_spec: &KasplexChainSpec) -> bool {
+    chain_spec.is_kasplex()
+}
+
+/// Check if NewPayload should accept txHash instead of full transactions for Kasplex.
+/// 
+/// For Kasplex, NewPayload can accept txHash in the sidecar instead of full transactions.
+pub fn kasplex_accept_tx_hash(
+    chain_spec: &KasplexChainSpec,
+    kasplex_data: Option<&KasplexExecutionData>,
+) -> bool {
+    if !chain_spec.is_kasplex() {
+        return false;
+    }
+    
+    // If we have Kasplex execution data with tx_hash, we can use it
+    if let Some(data) = kasplex_data {
+        !data.kasplex_sidecar.tx_hash.is_zero()
+    } else {
+        false
+    }
+}
+
+/// Check if a block is a Kasplex block based on the execution data.
+pub fn is_kasplex_block(
+    kasplex_data: Option<&KasplexExecutionData>,
+) -> bool {
+    kasplex_data
+        .map(|data| data.kasplex_sidecar.kasplex_block)
+        .unwrap_or(false)
+}

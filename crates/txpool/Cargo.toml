@@ -1,0 +1,19 @@
+[package]
+name = "kasplex-reth-txpool"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+kasplex-reth-chainspec = { path = "../chainspec" }
+kasplex-reth-tx-mapping = { path = "../tx_mapping" }
+alloy-primitives = { workspace = true }
+reth = { workspace = true }
+reth-provider = { workspace = true }
+reth-transaction-pool = { workspace = true }
+tracing = { workspace = true }
+
