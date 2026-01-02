@@ -24,7 +24,7 @@ fn main() {
     if let Err(err) = KasplexCli::<KasplexChainSpecParser, KasplexCliExtArgs>::parse_args().run(
         async move |builder, _ext_args| {
             info!(target: "reth::kasplex::cli", "Launching Kasplex node");
-            let NodeHandle { node: _, node_exit_future } = builder
+            let NodeHandle { node, node_exit_future } = builder
                 .node(KasplexNode)
                 .extend_rpc_modules(move |ctx| {
                     let provider = ctx.node().provider().clone();
@@ -46,6 +46,10 @@ fn main() {
                 })
                 .launch_with_debug_capabilities()
                 .await?;
+
+            // Keep the node handle alive to prevent RPC servers from being dropped
+            // The RpcServerHandle has #[must_use = "Server stops if dropped"]
+            let _node = node;
 
             node_exit_future.await
         },
