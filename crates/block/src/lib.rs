@@ -3,7 +3,7 @@ pub mod config;
 pub mod executor;
 pub mod factory;
 
-pub use config::KasplexEvmConfig;
+pub use config::{KasplexEvmConfig, ExtraDataConfig, BaseFeeConfig};
 pub use factory::KasplexExecutorBuilder;
 
 

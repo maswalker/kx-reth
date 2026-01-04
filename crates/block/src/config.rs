@@ -6,16 +6,62 @@ use reth_evm_ethereum::{EthEvmConfig, RethReceiptBuilder};
 use reth::primitives::{BlockTy, Header, SealedBlock, SealedHeader};
 use std::borrow::Cow;
 use alloy_rpc_types_eth::Withdrawals;
+use alloy_primitives::Bytes;
+use std::sync::Mutex;
 
 use crate::{assembler::KasplexBlockAssembler, factory::KasplexBlockExecutorFactory};
 
+/// Trait for EVM configs that support setting extra_data for the next block.
+pub trait ExtraDataConfig {
+    /// Sets the extra_data for the next block. This should be called before builder_for_next_block.
+    fn set_next_block_extra_data(&self, extra_data: Bytes);
+    
+    /// Clears the extra_data for the next block. This should be called after builder_for_next_block.
+    fn clear_next_block_extra_data(&self);
+}
+
+/// Trait for EVM configs that support setting base_fee_per_gas for the next block.
+pub trait BaseFeeConfig {
+    /// Sets the base_fee_per_gas for the next block. This should be called before builder_for_next_block.
+    fn set_next_block_base_fee_per_gas(&self, base_fee_per_gas: u64);
+    
+    /// Clears the base_fee_per_gas for the next block. This should be called after builder_for_next_block.
+    fn clear_next_block_base_fee_per_gas(&self);
+}
+
+impl ExtraDataConfig for KasplexEvmConfig {
+    fn set_next_block_extra_data(&self, extra_data: Bytes) {
+        *self.current_extra_data.lock().unwrap() = Some(extra_data);
+    }
+
+    fn clear_next_block_extra_data(&self) {
+        *self.current_extra_data.lock().unwrap() = None;
+    }
+}
+
+impl BaseFeeConfig for KasplexEvmConfig {
+    fn set_next_block_base_fee_per_gas(&self, base_fee_per_gas: u64) {
+        *self.current_base_fee_per_gas.lock().unwrap() = Some(base_fee_per_gas);
+    }
+
+    fn clear_next_block_base_fee_per_gas(&self) {
+        *self.current_base_fee_per_gas.lock().unwrap() = None;
+    }
+}
+
 /// Kasplex EVM configuration.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct KasplexEvmConfig {
     /// Block executor factory for Kasplex.
     pub executor_factory: KasplexBlockExecutorFactory<RethReceiptBuilder, Arc<KasplexChainSpec>, KasplexEvmFactory>,
     /// Block assembler for Kasplex.
     pub block_assembler: KasplexBlockAssembler,
+    /// Current extra_data for the next block (set before builder_for_next_block is called).
+    /// This is used to pass extra_data from BlockMetadata to context_for_next_block.
+    current_extra_data: Arc<Mutex<Option<Bytes>>>,
+    /// Current base_fee_per_gas for the next block (set before builder_for_next_block is called).
+    /// This is used to pass base_fee_per_gas from PayloadAttributes to next_evm_env.
+    current_base_fee_per_gas: Arc<Mutex<Option<u64>>>,
 }
 
 impl KasplexEvmConfig {
@@ -36,12 +82,26 @@ impl KasplexEvmConfig {
                 chain_spec,
                 evm_factory,
             ),
+            current_extra_data: Arc::new(Mutex::new(None)),
+            current_base_fee_per_gas: Arc::new(Mutex::new(None)),
         }
     }
 
     /// Returns the chain spec associated with this configuration.
     pub const fn chain_spec(&self) -> &Arc<KasplexChainSpec> {
         self.executor_factory.spec()
+    }
+
+}
+
+impl Clone for KasplexEvmConfig {
+    fn clone(&self) -> Self {
+        Self {
+            executor_factory: self.executor_factory.clone(),
+            block_assembler: self.block_assembler.clone(),
+            current_extra_data: Arc::clone(&self.current_extra_data),
+            current_base_fee_per_gas: Arc::clone(&self.current_base_fee_per_gas),
+        }
     }
 }
 
@@ -74,7 +134,18 @@ impl ConfigureEvm for KasplexEvmConfig {
     ) -> Result<reth_evm::EvmEnvFor<Self>, Self::Error> {
         // Use the inner EthEvmConfig to get the next EVM environment
         let inner = EthEvmConfig::new(self.chain_spec().clone());
-        inner.next_evm_env(parent, attributes)
+        let mut evm_env = inner.next_evm_env(parent, attributes)?;
+        
+        // Override basefee with the one from PayloadAttributes if set
+        // This ensures we use the baseFeePerGas from forkchoice_update, not the calculated one
+        if let Some(base_fee_per_gas) = *self.current_base_fee_per_gas.lock().unwrap() {
+            // Modify the block_env to use our base_fee_per_gas
+            // EvmEnvFor contains block_env which we can access and modify
+            // basefee is u64 in revm BlockEnv
+            evm_env.block_env.basefee = base_fee_per_gas;
+        }
+        
+        Ok(evm_env)
     }
 
     fn context_for_block<'a>(
@@ -98,13 +169,18 @@ impl ConfigureEvm for KasplexEvmConfig {
         _ctx: Self::NextBlockEnvCtx,
     ) -> Result<reth_evm::ExecutionCtxFor<'_, Self>, Self::Error> {
         use crate::factory::KasplexBlockExecutionCtx;
+        // Use extra_data from BlockMetadata if available, otherwise fall back to parent.extra_data
+        let extra_data = self.current_extra_data.lock().unwrap()
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(|| parent.extra_data.clone());
         Ok(KasplexBlockExecutionCtx {
             parent_hash: parent.hash(),
             parent_beacon_block_root: None,
             ommers: &[],
             withdrawals: Some(Cow::Owned(Withdrawals::new(vec![]))),
             basefee_per_gas: parent.base_fee_per_gas.unwrap_or_default(),
-            extra_data: parent.extra_data.clone(),
+            extra_data,
         })
     }
 }

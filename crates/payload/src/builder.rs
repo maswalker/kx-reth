@@ -18,7 +18,7 @@ use reth_evm::{
 use std::{convert::Infallible, sync::Arc};
 use tracing::{debug, trace, warn};
 
-use kasplex_reth_block::config::KasplexEvmConfig;
+use kasplex_reth_block::{KasplexEvmConfig, ExtraDataConfig, BaseFeeConfig};
 use kasplex_reth_chainspec::spec::KasplexChainSpec;
 use kasplex_reth_primitives::payload::builder::KasplexPayloadBuilderAttributes;
 
@@ -44,7 +44,7 @@ where
             Primitives = EthPrimitives,
             Error = Infallible,
             NextBlockEnvCtx = reth_evm::NextBlockEnvAttributes,
-        >,
+        > + ExtraDataConfig + BaseFeeConfig,
     Client: StateProviderFactory + ChainSpecProvider<ChainSpec = KasplexChainSpec> + Clone,
 {
     /// The payload attributes type to accept for building.
@@ -89,7 +89,7 @@ where
             Primitives = EthPrimitives,
             Error = Infallible,
             NextBlockEnvCtx = reth_evm::NextBlockEnvAttributes,
-        >,
+        > + ExtraDataConfig + BaseFeeConfig,
     Client: StateProviderFactory + ChainSpecProvider<ChainSpec = KasplexChainSpec>,
 {
     let BuildArguments { mut cached_reads, config, cancel, best_payload: _ } = args;
@@ -106,6 +106,11 @@ where
     let base_fee = attributes.base_fee_per_gas.to::<u64>();
     let gas_limit = attributes.gas_limit;
     
+    // Set extra_data and base_fee_per_gas for the next block before calling builder_for_next_block
+    // This ensures context_for_next_block and next_evm_env can use the correct values from BlockMetadata
+    evm_config.set_next_block_extra_data(attributes.extra_data.clone());
+    evm_config.set_next_block_base_fee_per_gas(base_fee);
+    
     let mut builder = evm_config
         .builder_for_next_block(
             &mut db,
@@ -120,6 +125,10 @@ where
             },
         )
         .map_err(PayloadBuilderError::other)?;
+    
+    // Clear extra_data and base_fee_per_gas after builder_for_next_block is called
+    evm_config.clear_next_block_extra_data();
+    evm_config.clear_next_block_base_fee_per_gas();
 
     debug!(target: "payload_builder", id=%attributes.payload_id(), parent_header = ?parent_header.hash(), parent_number = parent_header.number, "building new Kasplex payload");
     let mut total_fees = U256::ZERO;
