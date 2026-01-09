@@ -8,7 +8,7 @@ use kasplex_reth_rpc::eth::{
     auth::KasplexAuthExt,
     eth::KasplexExt,
 };
-use reth::builder::NodeHandle;
+use reth::{builder::NodeHandle, ress::install_ress_subprotocol};
 use reth_rpc::eth::{EthApiTypes, RpcNodeCore};
 use tracing::info;
 
@@ -22,7 +22,7 @@ fn main() {
     }
 
     if let Err(err) = KasplexCli::<KasplexChainSpecParser, KasplexCliExtArgs>::parse_args().run(
-        async move |builder, _ext_args| {
+        async move |builder, ext_args| {
             info!(target: "reth::kasplex::cli", "Launching Kasplex node");
             let NodeHandle { node, node_exit_future } = builder
                 .node(KasplexNode)
@@ -46,6 +46,23 @@ fn main() {
                 })
                 .launch_with_debug_capabilities()
                 .await?;
+
+            // Install ress subprotocol if enabled.
+            if ext_args.ress.enabled {
+                let provider = node.provider.clone();
+                let evm_config = node.evm_config.clone();
+                let network = node.network.clone();
+                let task_executor = node.task_executor.clone();
+                let engine_events = node.add_ons_handle.engine_events.new_listener();
+                install_ress_subprotocol(
+                    ext_args.ress,
+                    provider,
+                    evm_config,
+                    network,
+                    task_executor,
+                    engine_events,
+                )?;
+            }
 
             // Keep the node handle alive to prevent RPC servers from being dropped
             // The RpcServerHandle has #[must_use = "Server stops if dropped"]

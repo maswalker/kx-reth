@@ -30,7 +30,9 @@ pub mod command;
 /// Additional Kasplex CLI arguments.
 #[derive(Debug, clap::Args)]
 pub struct KasplexCliExtArgs {
-    // Add Kasplex-specific CLI arguments here if needed
+    /// Ress subprotocol arguments.
+    #[command(flatten)]
+    pub ress: reth::args::RessArgs,
 }
 
 /// The main kasplex-reth cli interface.
