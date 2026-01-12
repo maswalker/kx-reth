@@ -40,7 +40,14 @@ fn main() {
                         ctx.registry.eth_api().tx_resp_builder().clone(),
                         ctx.node().evm_config().clone(),
                     );
-                    ctx.auth_module.merge_auth_methods(kasplex_auth_rpc_ext.into_rpc())?;
+                    // Convert RpcModule<Arc<Self>> to Methods for merge_auth_methods
+                    let auth_rpc_module = kasplex_auth_rpc_ext.into_rpc();
+                    // Log registered methods for debugging
+                    let method_names: Vec<String> = auth_rpc_module.method_names().map(|s: &str| s.to_string()).collect();
+                    info!(target: "reth::kasplex::cli", "Registering kasplexAuth methods to auth_module: {:?}", method_names);
+                    // merge_auth_methods accepts impl Into<Methods>
+                    // RpcModule should implement Into<Methods> automatically
+                    ctx.auth_module.merge_auth_methods(auth_rpc_module)?;
 
                     Ok(())
                 })

@@ -79,6 +79,14 @@ where
         let validator = <Self as PayloadValidatorBuilder<N>>::build(self, ctx).await?;
         let data_dir = ctx.config.datadir.clone().resolve_datadir(ctx.config.chain.inner.chain);
         let invalid_block_hook = ctx.create_invalid_block_hook(&data_dir).await?;
+ 
+        // CRITICAL: Enable reorg support for Kasplex
+        // This allows forkchoice updates to reorg the chain to an older block,
+        // which is necessary when using --start-block to rebuild from a specific point
+        let tree_config = tree_config
+            .with_always_process_payload_attributes_on_canonical_head(true)
+            .with_unwind_canonical_header(true);
+
         Ok(BasicEngineValidator::new(
             ctx.node.provider().clone(),
             Arc::new(ctx.node.consensus().clone()),
