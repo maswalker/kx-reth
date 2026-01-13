@@ -167,6 +167,7 @@ fn reward_beneficiary<CTX: ContextTr>(
     let coinbase_gas_price = effective_gas_price.saturating_sub(basefee);
 
     // Reward beneficiary with tip (effective_gas_price - base_fee)
+    let spent_minus_refund = gas.spent().saturating_sub(gas.refunded() as u64);
     let tip_amount = coinbase_gas_price * spent_minus_refund as u128;
     let total_base_fee = U256::from(basefee.saturating_mul(spent_minus_refund as u128));
 
