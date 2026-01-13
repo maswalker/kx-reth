@@ -17,6 +17,7 @@ kasplex-reth-block = { path = "../block" }
 kasplex-reth-chainspec = { path = "../chainspec" }
 kasplex-reth-primitives = { path = "../primitives" }
 kasplex-reth-tx-mapping = { path = "../tx_mapping" }
+kasplex-reth-txpool = { path = "../txpool" }
 alloy-primitives = { workspace = true }
 alloy-rpc-types-eth = { workspace = true }
 alloy-rpc-types-engine = { workspace = true }

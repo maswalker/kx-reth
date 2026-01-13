@@ -6,6 +6,7 @@ use reth_node_builder::rpc::{EngineApiBuilder, PayloadValidatorBuilder};
 use reth_node_core::version::{CLIENT_CODE, version_metadata};
 use reth_rpc::EngineApi;
 use reth_rpc_engine_api::EngineCapabilities;
+use std::sync::Arc;
 
 use kasplex_reth_chainspec::spec::KasplexChainSpec;
 use kasplex_reth_primitives::engine::KasplexEngineTypes;
@@ -64,12 +65,15 @@ where
             version: version_metadata().cargo_pkg_version.to_string(),
             commit: version_metadata().vergen_git_sha.to_string(),
         };
+        // Clone provider and pool - in reth they are typically Arc types
+        let provider = ctx.node.provider().clone();
+        let pool = ctx.node.pool().clone();
         let inner_engine_api = EngineApi::new(
-            ctx.node.provider().clone(),
+            provider.clone(),
             ctx.config.chain.clone(),
             ctx.beacon_engine_handle.clone(),
             PayloadStore::new(ctx.node.payload_builder_handle().clone()),
-            ctx.node.pool().clone(),
+            pool.clone(),
             Box::new(ctx.node.task_executor().clone()),
             client,
             EngineCapabilities::default(),
@@ -77,6 +81,7 @@ where
             ctx.config.engine.accept_execution_requests_hash,
         );
 
-        Ok(KasplexEngineApi::new(inner_engine_api))
+        // Wrap in Arc if not already Arc (reth's provider/pool are typically already Arc)
+        Ok(KasplexEngineApi::new(inner_engine_api, Arc::from(provider), Arc::from(pool)))
     }
 }

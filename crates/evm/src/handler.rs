@@ -89,7 +89,6 @@ where
     ) -> Result<(), Self::Error> {
         let ctx = evm.ctx_mut();
         let (block, tx, cfg, journal, _, _) = ctx.all_mut();
-        
         let caller = tx.caller();
         let beneficiary = block.beneficiary();
         let basefee = block.basefee() as u128;
@@ -110,11 +109,23 @@ where
             cfg,
         )?;
 
-        // Deduct maximum possible fee from caller's balance
-        let effective_gas_price = tx.effective_gas_price(basefee);
-        let max_fee = U256::from(effective_gas_price.saturating_mul(tx.gas_limit() as u128));
-        
-        let new_balance = caller_account.balance().saturating_sub(max_fee);
+        // Bump the nonce for calls. Nonce for CREATE will be bumped in `make_create_frame`.
+        if tx.kind().is_call() {
+            caller_account.bump_nonce();
+        }
+
+        // Deduct gas fee from caller's balance
+        // Note: We use effective_balance_spending which accounts for actual gas price,
+        // and subtract tx.value() because value will be deducted separately in the call.
+        let effective_balance_spending = tx.effective_balance_spending(
+            basefee,
+            0u128, // blob_gasprice (not applicable for Kasplex)
+        ).map_err(|e| ERROR::from(reth_revm::context::result::InvalidTransaction::from(e)))?;
+
+        // Subtract value from effective_balance_spending because value is deducted separately in the call
+        let gas_balance_spending = effective_balance_spending.saturating_sub(tx.value());
+
+        let new_balance = caller_account.balance().saturating_sub(gas_balance_spending);
         caller_account.set_balance(new_balance);
 
         Ok(())
@@ -154,26 +165,27 @@ fn reward_beneficiary<CTX: ContextTr>(
     let basefee = context.block().basefee() as u128;
     let effective_gas_price = context.tx().effective_gas_price(basefee);
     let coinbase_gas_price = effective_gas_price.saturating_sub(basefee);
-    
+
     // Reward beneficiary with tip (effective_gas_price - base_fee)
-    let spent_minus_refund = gas.spent().saturating_sub(gas.refunded() as u64);
+    let tip_amount = coinbase_gas_price * spent_minus_refund as u128;
+    let total_base_fee = U256::from(basefee.saturating_mul(spent_minus_refund as u128));
+
     context.journal_mut().balance_incr(
         beneficiary,
-        U256::from(coinbase_gas_price * spent_minus_refund as u128),
+        U256::from(tip_amount),
     )?;
 
     // Distribute all base fee to Treasury address
-    let total_base_fee = U256::from(basefee.saturating_mul(spent_minus_refund as u128));
     let chain_id = context.cfg().chain_id();
     let treasury_address = crate::get_treasury_address(chain_id);
-    
+
     context.journal_mut().balance_incr(treasury_address, total_base_fee)?;
 
     debug!(
         target: "kasplex_evm",
         "Rewarded beneficiary: {} (tip: {}), distributed base fee to treasury: {} (amount: {}) at block: {}",
         beneficiary,
-        coinbase_gas_price * spent_minus_refund as u128,
+        tip_amount,
         treasury_address,
         total_base_fee,
         block_number
@@ -203,12 +215,25 @@ pub fn reimburse_caller<CTX: ContextTr>(
     );
 
     // Return balance of not spent gas
-    context.journal_mut().balance_incr(
+    // Note: In geth, refund is added to gasRemaining before returnGas(), so returnGas() only
+    // returns gasRemaining * gasPrice. In reth, gas.remaining() and gas.refunded() are separate,
+    // so we need to return (remaining + refunded) * effective_gas_price to match geth's behavior.
+    let remaining_gas = gas.remaining();
+    let refunded_gas = gas.refunded() as u64;
+    let total_to_refund = remaining_gas + refunded_gas;
+    let refund_amount = U256::from(effective_gas_price.saturating_mul(total_to_refund as u128)) + additional_refund;
+
+    context.journal_mut().balance_incr(caller, refund_amount)?;
+
+    debug!(
+        target: "kasplex_evm",
+        "Reimbursed caller: {} (remaining: {}, refunded: {}, total: {}, amount: {})",
         caller,
-        U256::from(
-            effective_gas_price.saturating_mul((gas.remaining() + gas.refunded() as u64) as u128),
-        ) + additional_refund,
-    )?;
+        remaining_gas,
+        refunded_gas,
+        total_to_refund,
+        refund_amount
+    );
 
     Ok(())
 }

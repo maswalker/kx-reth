@@ -4743,6 +4743,7 @@ dependencies = [
  "kasplex-reth-chainspec",
  "kasplex-reth-primitives",
  "kasplex-reth-tx-mapping",
+ "kasplex-reth-txpool",
  "reth",
  "reth-engine-primitives",
  "reth-engine-tree",
@@ -4782,10 +4783,13 @@ dependencies = [
 name = "kasplex-reth-txpool"
 version = "0.1.0"
 dependencies = [
+ "alloy-consensus",
  "alloy-primitives 1.5.0",
  "kasplex-reth-chainspec",
  "kasplex-reth-tx-mapping",
  "reth",
+ "reth-primitives",
+ "reth-primitives-traits",
  "reth-provider",
  "reth-transaction-pool",
  "tracing",
