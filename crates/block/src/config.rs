@@ -237,14 +237,14 @@ impl ConfigureEngineEvm<alloy_rpc_types_engine::ExecutionData> for KasplexEvmCon
         use reth_provider::errors::any::AnyError;
         use alloy_eips::eip2718::Decodable2718;
         
-        Ok(payload.payload.transactions().clone().into_iter().map(
-            |tx| {
-                let tx = TransactionSigned::decode_2718_exact(tx.as_ref())
-                    .map_err(AnyError::new)?;
-                let signer = SignedTransaction::try_recover(&tx).map_err(AnyError::new)?;
-                Ok::<_, AnyError>(tx.with_signer(signer))
-            },
-        ))
+        let transactions: Vec<alloy_primitives::Bytes> = payload.payload.transactions().clone().into_iter().collect();
+        
+        Ok((transactions, move |tx: alloy_primitives::Bytes| {
+            let tx = TransactionSigned::decode_2718_exact(tx.as_ref())
+                .map_err(AnyError::new)?;
+            let signer = SignedTransaction::try_recover(&tx).map_err(AnyError::new)?;
+            Ok::<_, AnyError>(tx.with_signer(signer))
+        }))
     }
 }
 

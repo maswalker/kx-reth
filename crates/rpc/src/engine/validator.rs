@@ -191,7 +191,7 @@ where
         // KasplexExecutionData directly. The sidecar handling is done separately.
         // If we need to handle tx_hash or withdrawals_hash from sidecar, we would do it here.
         
-        let sealed_block = block.seal_slow();
+        let sealed_block = block.seal();
         let block_hash = sealed_block.hash();
 
         // Debug: Log block fields after conversion
@@ -292,6 +292,16 @@ where
             return Err(InvalidPayloadAttributesError::InvalidTimestamp);
         }
         Ok(())
+    }
+
+    /// Converts the execution data into a sealed block.
+    fn convert_payload_to_block(
+        &self,
+        execution_data: Types::ExecutionData,
+    ) -> Result<reth_primitives_traits::SealedBlock<Self::Block>, NewPayloadError> {
+        let recovered = <Self as PayloadValidator<Types>>::ensure_well_formed_payload(self, execution_data)?;
+        // RecoveredBlock has a sealed_block method that returns SealedBlock
+        Ok(recovered.sealed_block().clone())
     }
 }
 

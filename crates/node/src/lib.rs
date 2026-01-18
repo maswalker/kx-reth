@@ -27,6 +27,8 @@ use reth::{
 use reth_engine_primitives::{EngineApiValidator, PayloadValidator};
 use reth_ethereum::EthPrimitives;
 use reth_node_api::{BlockTy, NodeAddOns, PayloadAttributesBuilder, PayloadTypes};
+use reth_engine_local::LocalPayloadAttributesBuilder;
+use std::sync::Arc;
 use reth_node_builder::{
     NodeAdapter,
     rpc::{
@@ -178,38 +180,11 @@ impl<N: FullNodeComponents<Types = Self>> DebugNode<N> for KasplexNode {
 
     /// Creates a payload attributes builder for local mining in dev mode.
     fn local_payload_attributes_builder(
-        _chain_spec: &Self::ChainSpec,
+        chain_spec: &Self::ChainSpec,
     ) -> impl PayloadAttributesBuilder<
         <<Self as reth_node_api::NodeTypes>::Payload as PayloadTypes>::PayloadAttributes,
     > {
-        // Simple implementation that returns default attributes
-        move |timestamp: u64| {
-            use kasplex_reth_primitives::payload::attributes::{KasplexBlockMetadata, KasplexPayloadAttributes};
-            use alloy_primitives::{Address, B256, U256};
-            use alloy_rpc_types_engine::PayloadAttributes as EthPayloadAttributes;
-            
-            // Return default payload attributes
-            // This is a placeholder - in a full implementation, this would construct
-            // proper payload attributes based on the chain spec and timestamp
-            KasplexPayloadAttributes {
-                payload_attributes: EthPayloadAttributes {
-                    timestamp,
-                    prev_randao: B256::ZERO,
-                    suggested_fee_recipient: Address::ZERO,
-                    withdrawals: None,
-                    parent_beacon_block_root: None,
-                },
-                base_fee_per_gas: U256::ZERO,
-                block_metadata: KasplexBlockMetadata {
-                    beneficiary: Address::ZERO,
-                    gas_limit: 0,
-                    timestamp: U256::from(timestamp),
-                    mix_hash: B256::ZERO,
-                    tx_list: Default::default(),
-                    extra_data: Default::default(),
-                },
-            }
-        }
+        LocalPayloadAttributesBuilder::new(Arc::new(chain_spec.clone()))
     }
 }
 

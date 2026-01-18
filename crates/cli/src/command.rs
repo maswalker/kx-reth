@@ -69,6 +69,7 @@ where
             ext,
             engine,
             era,
+            static_files,
         } = *self.0;
 
         // set up node config
@@ -88,6 +89,7 @@ where
             pruning,
             engine,
             era,
+            static_files,
         };
 
         let data_dir = node_config.datadir();

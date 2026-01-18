@@ -68,6 +68,7 @@ where
         // Clone provider and pool - in reth they are typically Arc types
         let provider = ctx.node.provider().clone();
         let pool = ctx.node.pool().clone();
+        let network = ctx.node.network().clone();
         let inner_engine_api = EngineApi::new(
             provider.clone(),
             ctx.config.chain.clone(),
@@ -79,6 +80,7 @@ where
             EngineCapabilities::default(),
             engine_validator,
             ctx.config.engine.accept_execution_requests_hash,
+            network,
         );
 
         // Wrap in Arc if not already Arc (reth's provider/pool are typically already Arc)

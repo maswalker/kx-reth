@@ -61,6 +61,13 @@ impl ExecutionPayloadTr for KasplexExecutionData {
         None
     }
 
+    /// Returns the access list included in this payload.
+    ///
+    /// Returns `None` for pre-Amsterdam blocks.
+    fn block_access_list(&self) -> Option<&alloy_primitives::Bytes> {
+        None
+    }
+
     /// Returns the parent beacon block root, if applicable.
     fn parent_beacon_block_root(&self) -> Option<B256> {
         None
@@ -74,6 +81,11 @@ impl ExecutionPayloadTr for KasplexExecutionData {
     /// Returns the gas used in the block.
     fn gas_used(&self) -> u64 {
         self.execution_payload.gas_used
+    }
+
+    /// Returns the number of transactions in the block.
+    fn transaction_count(&self) -> usize {
+        self.execution_payload.transactions.len()
     }
 }
 

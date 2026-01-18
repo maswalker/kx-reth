@@ -37,7 +37,7 @@ fn main() {
                     let kasplex_auth_rpc_ext = KasplexAuthExt::new(
                         provider,
                         ctx.node().pool().clone(),
-                        ctx.registry.eth_api().tx_resp_builder().clone(),
+                        ctx.registry.eth_api().converter().clone(),
                         ctx.node().evm_config().clone(),
                     );
                     // Convert RpcModule<Arc<Self>> to Methods for merge_auth_methods

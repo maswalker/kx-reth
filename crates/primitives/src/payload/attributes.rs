@@ -67,11 +67,12 @@ impl PayloadAttributesBuilder<KasplexPayloadAttributes>
     for LocalPayloadAttributesBuilder<KasplexChainSpec>
 {
     /// Return a new payload attribute from the builder.
-    fn build(&self, timestamp: u64) -> KasplexPayloadAttributes {
+    fn build(&self, parent: &reth_primitives_traits::SealedHeader) -> KasplexPayloadAttributes {
         // Delegate to the underlying ETH payload builder to avoid self-recursion.
         let eth_payload_attributes =
-            <Self as PayloadAttributesBuilder<EthPayloadAttributes>>::build(self, timestamp);
+            <Self as PayloadAttributesBuilder<EthPayloadAttributes>>::build(self, parent);
 
+        let timestamp = eth_payload_attributes.timestamp();
         KasplexPayloadAttributes {
             payload_attributes: eth_payload_attributes,
             base_fee_per_gas: U256::ZERO,

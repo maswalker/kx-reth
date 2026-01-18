@@ -55,9 +55,6 @@ where
 }
 
 impl<B: Block> Consensus<B> for KasplexBeaconConsensus {
-    /// The error type related to consensus.
-    type Error = ConsensusError;
-
     /// Ensures the block response data matches the header.
     ///
     /// This ensures the body response items match the header's hashes:
@@ -110,7 +107,7 @@ where
             return Err(ConsensusError::TheMergeOmmerRootIsNotEmpty);
         }
 
-        validate_header_extra_data(header)?;
+        validate_header_extra_data(header, 32)?;
         validate_header_gas(header)?;
         validate_header_base_fee(header, &self.chain_spec)?;
         validate_kasplex_base_fee_in_header(header)

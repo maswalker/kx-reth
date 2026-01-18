@@ -8,6 +8,8 @@ use reth_rpc_eth_api::{
     },
     RpcNodeCore, RpcNodeCoreExt, EthApiTypes,
 };
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 use reth_rpc_eth_types::{
     EthApiError, EthStateCache, FeeHistoryCache, GasPriceOracle, PendingBlock,
     builder::config::PendingBlockKind, error::FromEvmError, utils::recover_raw_transaction,
@@ -20,6 +22,7 @@ use reth::tasks::{
 };
 use reth_transaction_pool::{PoolTransaction, TransactionPool, TransactionOrigin};
 use reth::primitives::TransactionSigned;
+use reth_primitives_traits::{WithEncoded, Recovered};
 use jsonrpsee::tokio;
 use std::time::Duration;
 
@@ -44,14 +47,14 @@ impl<N: RpcNodeCore, Rpc: RpcConvert> std::fmt::Debug for KasplexEthApi<N, Rpc> 
 impl<N, Rpc> EthApiTypes for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
-    Rpc: RpcConvert,
+    Rpc: RpcConvert<Error = EthApiError>,
 {
     type Error = EthApiError;
     type NetworkTypes = Rpc::Network;
     type RpcConvert = Rpc;
 
-    fn tx_resp_builder(&self) -> &Self::RpcConvert {
-        self.0.tx_resp_builder()
+    fn converter(&self) -> &Self::RpcConvert {
+        self.0.converter()
     }
 }
 
@@ -93,7 +96,7 @@ where
 impl<N, Rpc> SpawnBlocking for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
-    Rpc: RpcConvert,
+    Rpc: RpcConvert<Error = EthApiError, Evm = N::Evm>,
 {
     fn io_task_spawner(&self) -> impl TaskSpawner {
         self.0.task_spawner()
@@ -106,13 +109,17 @@ where
     fn tracing_task_guard(&self) -> &BlockingTaskGuard {
         self.0.blocking_task_guard()
     }
+
+    fn blocking_io_task_guard(&self) -> &Arc<Semaphore> {
+        self.0.blocking_io_task_guard()
+    }
 }
 
 impl<N, Rpc> LoadReceipt for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
 }
 
@@ -120,7 +127,7 @@ impl<N, Rpc> Trace for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
 }
 
@@ -128,7 +135,7 @@ impl<N, Rpc> EthFees for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
 }
 
@@ -136,7 +143,7 @@ impl<N, Rpc> LoadFee for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
     fn gas_oracle(&self) -> &GasPriceOracle<Self::Provider> {
         self.0.gas_oracle()
@@ -151,7 +158,7 @@ impl<N, Rpc> LoadBlock for KasplexEthApi<N, Rpc>
 where
     Self: LoadPendingBlock,
     N: RpcNodeCore,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
 }
 
@@ -194,7 +201,7 @@ impl<N, Rpc> EthState for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
     fn max_proof_window(&self) -> u64 {
         self.0.eth_proof_window()
@@ -205,7 +212,7 @@ impl<N, Rpc> LoadState for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
 }
 
@@ -213,7 +220,7 @@ impl<N, Rpc> EthBlocks for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
 }
 
@@ -221,7 +228,7 @@ impl<N, Rpc> LoadPendingBlock for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
     fn pending_block(&self) -> &tokio::sync::Mutex<Option<PendingBlock<Self::Primitives>>> {
         self.0.pending_block()
@@ -240,7 +247,7 @@ impl<N, Rpc> EthTransactions for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
     <N::Pool as TransactionPool>::Transaction: PoolTransaction<Consensus = TransactionSigned>,
 {
     fn signers(&self) -> &SignersForRpc<Self::Provider, Self::NetworkTypes> {
@@ -268,20 +275,27 @@ where
 
         Ok(outcome.hash)
     }
+
+    async fn send_transaction(
+        &self,
+        tx: WithEncoded<Recovered<<<N::Pool as TransactionPool>::Transaction as PoolTransaction>::Pooled>>,
+    ) -> Result<alloy_primitives::FixedBytes<32>, Self::Error> {
+        self.0.send_transaction(tx).await
+    }
 }
 
 impl<N, Rpc> LoadTransaction for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     EthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
 }
 
 impl<N, Rpc> EthApiSpec for KasplexEthApi<N, Rpc>
 where
     N: RpcNodeCore,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = EthApiError, Evm = N::Evm>,
 {
     fn starting_block(&self) -> reth::revm::primitives::U256 {
         self.0.starting_block()

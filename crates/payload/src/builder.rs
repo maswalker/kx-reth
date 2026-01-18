@@ -122,6 +122,7 @@ where
                 gas_limit,
                 parent_beacon_block_root: attributes.parent_beacon_block_root(),
                 withdrawals: attributes.withdrawals().clone().into(),
+                extra_data: Default::default(),
             },
         )
         .map_err(PayloadBuilderError::other)?;

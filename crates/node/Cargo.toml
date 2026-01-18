@@ -27,6 +27,9 @@ reth-provider = { workspace = true }
 reth-engine-primitives = { workspace = true }
 reth-ethereum-primitives = { workspace = true }
 reth-rpc = { workspace = true }
+reth-primitives-traits = { workspace = true }
+reth-payload-primitives = { workspace = true }
+reth-engine-local = { workspace = true }
 tokio-stream = { version = "0.1", features = [] }
 tracing = { workspace = true }
 tokio = { workspace = true }

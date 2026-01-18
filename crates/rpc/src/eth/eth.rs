@@ -54,4 +54,3 @@ where
         jsonrpsee::RpcModule::new(self)
     }
 }
-
