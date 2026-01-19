@@ -11,10 +11,10 @@ path = "src/lib.rs"
 [dependencies]
 kasplex-reth-chainspec = { path = "../chainspec" }
 eyre = { workspace = true }
-reth = { workspace = true }
-reth-ethereum = { workspace = true }
-reth-node-api = { workspace = true }
-reth-node-builder = { workspace = true }
-reth-transaction-pool = { workspace = true }
+reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
+reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum" }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-api" }
+reth-node-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-builder" }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-transaction-pool" }
 tracing = { workspace = true }
 

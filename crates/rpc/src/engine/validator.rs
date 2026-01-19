@@ -17,6 +17,7 @@ use alloy_rpc_types_engine::PayloadError;
 use reth::primitives::RecoveredBlock;
 use reth_engine_primitives::EngineApiValidator;
 use reth_engine_tree::tree::{TreeConfig, payload_validator::BasicEngineValidator};
+use reth_trie_db::ChangesetCache;
 use reth_ethereum::{Block, EthPrimitives};
 use reth_evm::ConfigureEngineEvm;
 use reth_node_api::{
@@ -75,6 +76,7 @@ where
         self,
         ctx: &AddOnsContext<'_, N>,
         tree_config: TreeConfig,
+        changeset_cache: ChangesetCache,
     ) -> eyre::Result<Self::EngineValidator> {
         let validator = <Self as PayloadValidatorBuilder<N>>::build(self, ctx).await?;
         let data_dir = ctx.config.datadir.clone().resolve_datadir(ctx.config.chain.inner.chain);
@@ -94,6 +96,7 @@ where
             validator,
             tree_config,
             invalid_block_hook,
+            changeset_cache,
         ))
     }
 }

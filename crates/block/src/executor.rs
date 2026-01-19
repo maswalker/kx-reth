@@ -172,5 +172,10 @@ where
     fn evm(&self) -> &Self::Evm {
         &self.evm
     }
+
+    /// Returns a reference to the receipts of executed transactions.
+    fn receipts(&self) -> &[Self::Receipt] {
+        &self.receipts
+    }
 }
 

@@ -12,12 +12,12 @@ path = "src/lib.rs"
 kasplex-reth-chainspec = { path = "../chainspec" }
 alloy-evm = { workspace = true }
 alloy-primitives = { workspace = true }
-reth = { workspace = true }
-reth-evm = { workspace = true }
-reth-evm-ethereum = { workspace = true }
-reth-ethereum-forks = { workspace = true }
-reth-primitives = { workspace = true }
-reth-revm = { workspace = true }
+reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
+reth-evm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-evm" }
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-evm-ethereum" }
+reth-ethereum-forks = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum-forks" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-primitives" }
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-revm" }
 revm-database-interface = { workspace = true }
 revm-primitives = { workspace = true }
 tracing = { workspace = true }

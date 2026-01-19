@@ -26,29 +26,30 @@ async-trait = { workspace = true }
 eyre = { workspace = true }
 jsonrpsee = { workspace = true }
 jsonrpsee-types = { workspace = true }
-reth = { workspace = true }
-reth-engine-primitives = { workspace = true }
-reth-engine-tree = { workspace = true }
-reth-ethereum = { workspace = true }
-reth-evm = { workspace = true }
-reth-node-api = { workspace = true }
-reth-node-builder = { workspace = true }
-reth-node-ethereum = { workspace = true }
-reth-payload-primitives = { workspace = true }
-reth-primitives-traits = { workspace = true }
-reth-provider = { workspace = true }
-reth-rpc = { workspace = true }
-reth-rpc-builder = { workspace = true }
-reth-rpc-eth-api = { workspace = true }
-reth-rpc-eth-types = { workspace = true }
-reth-rpc-engine-api = { workspace = true }
-reth-node-core = { workspace = true }
+reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
+reth-engine-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-engine-primitives" }
+reth-engine-tree = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-engine-tree" }
+reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum" }
+reth-evm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-evm" }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-api" }
+reth-node-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-builder" }
+reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-ethereum" }
+reth-payload-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-payload-primitives" }
+reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-primitives-traits" }
+reth-provider = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-provider" }
+reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-rpc" }
+reth-rpc-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-rpc-builder" }
+reth-rpc-eth-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-rpc-eth-api" }
+reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-rpc-eth-types" }
+reth-rpc-engine-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-rpc-engine-api" }
+reth-node-core = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-core" }
 alloy-consensus = { workspace = true }
 alloy-eips = { workspace = true }
 alloy-hardforks = { workspace = true }
 alloy-rpc-types = { workspace = true }
-reth-ethereum-engine-primitives = { workspace = true }
-reth-transaction-pool = { workspace = true }
+reth-ethereum-engine-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum-engine-primitives" }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-transaction-pool" }
+reth-trie-db = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-trie-db" }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

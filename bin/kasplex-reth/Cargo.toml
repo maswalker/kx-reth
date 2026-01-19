@@ -13,9 +13,9 @@ path = "src/main.rs"
 kasplex-reth-cli = { path = "../../crates/cli" }
 kasplex-reth-node = { path = "../../crates/node" }
 kasplex-reth-rpc = { path = "../../crates/rpc" }
-reth = { workspace = true }
-reth-cli-util = { workspace = true }
-reth-rpc = { workspace = true }
+reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
+reth-cli-util = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-cli-util" }
+reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-rpc" }
 tracing = { workspace = true }
 
 

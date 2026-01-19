@@ -1,8 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
-use alloy_evm::{Database, Evm, EvmEnv};
+use alloy_evm::{Database as AlloyDatabase, Evm, EvmEnv};
 use reth::revm::{
-    Context, ExecuteEvm, InspectEvm, Inspector,
+    Context, Database, ExecuteEvm, InspectEvm, Inspector,
     context::{
         BlockEnv, TxEnv,
         result::{EVMError, HaltReason, ResultAndState},
@@ -15,12 +15,18 @@ use reth::revm::primitives::hardfork::SpecId;
 use crate::evm::KasplexEvm;
 
 /// A wrapper around the Kasplex EVM that implements the `Evm` trait in `alloy_evm`.
-pub struct KasplexEvmWrapper<DB: Database, INSP, P> {
+pub struct KasplexEvmWrapper<DB, INSP, P>
+where
+    DB: AlloyDatabase + Database,
+{
     inner: KasplexEvm<KasplexEvmContext<DB>, INSP, P>,
     inspect: bool,
 }
 
-impl<DB: Database, INSP, P> KasplexEvmWrapper<DB, INSP, P> {
+impl<DB, INSP, P> KasplexEvmWrapper<DB, INSP, P>
+where
+    DB: AlloyDatabase + Database,
+{
     /// Creates a new [`KasplexEvmWrapper`] instance.
     pub const fn new(evm: KasplexEvm<KasplexEvmContext<DB>, INSP, P>, inspect: bool) -> Self {
         Self { inner: evm, inspect }
@@ -42,7 +48,10 @@ impl<DB: Database, INSP, P> KasplexEvmWrapper<DB, INSP, P> {
     }
 }
 
-impl<DB: Database, I, P> Deref for KasplexEvmWrapper<DB, I, P> {
+impl<DB, I, P> Deref for KasplexEvmWrapper<DB, I, P>
+where
+    DB: AlloyDatabase + Database,
+{
     type Target = KasplexEvmContext<DB>;
 
     #[inline]
@@ -51,7 +60,10 @@ impl<DB: Database, I, P> Deref for KasplexEvmWrapper<DB, I, P> {
     }
 }
 
-impl<DB: Database, I, P> DerefMut for KasplexEvmWrapper<DB, I, P> {
+impl<DB, I, P> DerefMut for KasplexEvmWrapper<DB, I, P>
+where
+    DB: AlloyDatabase + Database,
+{
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.ctx_mut()
@@ -68,7 +80,7 @@ pub type KasplexEvmContext<DB> = Context<BlockEnv, TxEnv, CfgEnv<SpecId>, DB>;
 /// Executing a transaction will return the outcome of the transaction.
 impl<DB, I, P> Evm for KasplexEvmWrapper<DB, I, P>
 where
-    DB: Database,
+    DB: AlloyDatabase + Database,
     I: Inspector<KasplexEvmContext<DB>>,
     P: PrecompileProvider<KasplexEvmContext<DB>, Output = InterpreterResult>,
 {

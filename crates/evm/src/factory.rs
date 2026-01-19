@@ -23,7 +23,7 @@ pub struct KasplexEvmFactory;
 
 impl EvmFactory for KasplexEvmFactory {
     /// The EVM type that this factory creates.
-    type Evm<DB: Database, I: Inspector<KasplexEvmContext<DB>, EthInterpreter>> =
+    type Evm<DB: Database + reth::revm::Database, I: Inspector<KasplexEvmContext<DB>, EthInterpreter>> =
         KasplexEvmWrapper<DB, I, Self::Precompiles>;
     /// Transaction environment.
     type Tx = TxEnv;
@@ -32,7 +32,7 @@ impl EvmFactory for KasplexEvmFactory {
     /// Halt reason.
     type HaltReason = HaltReason;
     /// The EVM context for inspectors.
-    type Context<DB: Database> = KasplexEvmContext<DB>;
+    type Context<DB: Database + reth::revm::Database> = KasplexEvmContext<DB>;
     /// The EVM specification identifier
     type Spec = SpecId;
     /// Block environment used by the EVM.
@@ -41,7 +41,7 @@ impl EvmFactory for KasplexEvmFactory {
     type Precompiles = PrecompilesMap;
 
     /// Creates a new instance of an EVM.
-    fn create_evm<DB: Database>(
+    fn create_evm<DB: Database + reth::revm::Database>(
         &self,
         db: DB,
         input: EvmEnv<Self::Spec, Self::BlockEnv>,
@@ -60,7 +60,7 @@ impl EvmFactory for KasplexEvmFactory {
     }
 
     /// Creates a new instance of an EVM with an inspector.
-    fn create_evm_with_inspector<DB: Database, I: Inspector<Self::Context<DB>>>(
+    fn create_evm_with_inspector<DB: Database + reth::revm::Database, I: Inspector<Self::Context<DB>>>(
         &self,
         db: DB,
         input: EvmEnv<Self::Spec, Self::BlockEnv>,

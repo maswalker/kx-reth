@@ -11,20 +11,20 @@ path = "src/lib.rs"
 [dependencies]
 kasplex-reth-consensus = { path = "../consensus" }
 kasplex-reth-node = { path = "../node" }
-reth = { workspace = true }
-reth-cli = { workspace = true }
-reth-cli-commands = { workspace = true }
-reth-cli-util = { workspace = true }
-reth-node-builder = { workspace = true }
-reth-tracing = { workspace = true }
+reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
+reth-cli = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-cli" }
+reth-cli-commands = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-cli-commands" }
+reth-cli-util = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-cli-util" }
+reth-node-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-builder" }
+reth-tracing = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-tracing" }
 tracing = { workspace = true }
 clap = { workspace = true }
 eyre = { workspace = true }
 alloy-consensus = { workspace = true }
-reth-db = { workspace = true }
-reth-ethereum-forks = { workspace = true }
-reth-node-api = { workspace = true }
-reth-ethereum = { workspace = true }
-reth-storage-api = { workspace = true }
-reth-node-ethereum = { workspace = true }
+reth-db = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-db" }
+reth-ethereum-forks = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum-forks" }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-api" }
+reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum" }
+reth-storage-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-storage-api" }
+reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-ethereum" }
 

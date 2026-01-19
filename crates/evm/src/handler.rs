@@ -2,6 +2,7 @@ use reth::revm::{
     Database, Inspector,
     context::{
         Block, Cfg, ContextTr, JournalTr, Transaction,
+        journaled_state::account::JournaledAccountTr,
         result::HaltReason,
     },
     handler::{
@@ -99,12 +100,16 @@ where
         // Note: Access list loading is handled by the EVM framework automatically
         // We don't need to manually load accounts and storage from the access list here
 
+        // Load caller's account info for validation first
+        let caller_account_info = journal.load_account(caller)?.info.clone();
+
         // Load caller's account to validate and deduct balance
-        let mut caller_account = journal.load_account_with_code_mut(caller)?.data;
+        let account_load_result = journal.load_account_with_code_mut(caller)?;
+        let mut caller_account = account_load_result.data;
 
         // Validate account nonce and code
         validate_account_nonce_and_code_with_components(
-            &caller_account.info,
+            &caller_account_info,
             tx,
             cfg,
         )?;

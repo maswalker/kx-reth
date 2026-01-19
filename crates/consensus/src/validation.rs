@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use alloy_consensus::EMPTY_OMMER_ROOT_HASH;
-use alloy_primitives::U256;
+use alloy_primitives::{Bloom, FixedBytes, U256};
 use reth::{
     beacon_consensus::validate_block_post_execution,
     consensus::{Consensus, ConsensusError, FullConsensus, HeaderValidator},
@@ -49,8 +49,9 @@ where
         &self,
         block: &RecoveredBlock<N::Block>,
         result: &BlockExecutionResult<N::Receipt>,
+        state_root_and_bloom: Option<(FixedBytes<32>, Bloom)>,
     ) -> Result<(), ConsensusError> {
-        validate_block_post_execution(block, &self.chain_spec, &result.receipts, &result.requests)
+        validate_block_post_execution(block, &self.chain_spec, &result.receipts, &result.requests, state_root_and_bloom)
     }
 }
 
