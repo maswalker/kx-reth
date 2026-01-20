@@ -9,22 +9,22 @@ license.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
-kasplex-reth-block = { path = "../block" }
-kasplex-reth-chainspec = { path = "../chainspec" }
-kasplex-reth-primitives = { path = "../primitives" }
-kasplex-reth-tx-mapping = { path = "../tx_mapping" }
-reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
-reth-basic-payload-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-basic-payload-builder" }
-reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum" }
-reth-ethereum-engine-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum-engine-primitives" }
-reth-ethereum-forks = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum-forks" }
-reth-evm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-evm" }
-reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-evm-ethereum" }
-reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-api" }
-reth-payload-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-payload-primitives" }
-reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-primitives-traits" }
-reth-provider = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-provider" }
-reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-transaction-pool" }
+kasplex-reth-block = { workspace = true }
+kasplex-reth-chainspec = { workspace = true }
+kasplex-reth-primitives = { workspace = true }
+kasplex-reth-tx-mapping = { workspace = true }
+reth = { workspace = true }
+reth-basic-payload-builder = { workspace = true }
+reth-ethereum = { workspace = true }
+reth-ethereum-engine-primitives = { workspace = true }
+reth-ethereum-forks = { workspace = true }
+reth-evm = { workspace = true }
+reth-evm-ethereum = { workspace = true }
+reth-node-api = { workspace = true }
+reth-payload-primitives = { workspace = true }
+reth-primitives-traits = { workspace = true }
+reth-provider = { workspace = true }
+reth-transaction-pool = { workspace = true }
 alloy-consensus = { workspace = true }
 alloy-hardforks = { workspace = true }
 alloy-primitives = { workspace = true }

@@ -9,8 +9,8 @@ license.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
-kasplex-reth-chainspec = { path = "../chainspec" }
-kasplex-reth-evm = { path = "../evm" }
+kasplex-reth-chainspec = { workspace = true }
+kasplex-reth-evm = { workspace = true }
 alloy-consensus = { workspace = true }
 alloy-eips = { workspace = true }
 alloy-evm = { workspace = true }
@@ -18,15 +18,15 @@ alloy-primitives = { workspace = true }
 alloy-rpc-types-eth = { workspace = true }
 alloy-rpc-types-engine = { workspace = true }
 eyre = { workspace = true }
-reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
-reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum" }
-reth-evm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-evm" }
-reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-evm-ethereum" }
-reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-api" }
-reth-node-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-builder" }
-reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-primitives-traits" }
-reth-provider = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-provider" }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-revm" }
+reth = { workspace = true }
+reth-ethereum = { workspace = true }
+reth-evm = { workspace = true }
+reth-evm-ethereum = { workspace = true }
+reth-node-api = { workspace = true }
+reth-node-builder = { workspace = true }
+reth-primitives-traits = { workspace = true }
+reth-provider = { workspace = true }
+reth-revm = { workspace = true }
 revm-database-interface = { workspace = true }
 rayon = "1.8"
 

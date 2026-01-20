@@ -9,14 +9,14 @@ license.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
-kasplex-reth-chainspec = { path = "../chainspec" }
-kasplex-reth-tx-mapping = { path = "../tx_mapping" }
+kasplex-reth-chainspec = { workspace = true }
+kasplex-reth-tx-mapping = { workspace = true }
 alloy-primitives = { workspace = true }
 alloy-consensus = { workspace = true }
-reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-primitives" }
-reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-primitives-traits" }
-reth-provider = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-provider" }
-reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-transaction-pool" }
+reth = { workspace = true }
+reth-primitives = { workspace = true }
+reth-primitives-traits = { workspace = true }
+reth-provider = { workspace = true }
+reth-transaction-pool = { workspace = true }
 tracing = { workspace = true }
 

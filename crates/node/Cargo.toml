@@ -9,27 +9,27 @@ license.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
-kasplex-reth-block = { path = "../block" }
-kasplex-reth-chainspec = { path = "../chainspec" }
-kasplex-reth-consensus = { path = "../consensus" }
-kasplex-reth-network = { path = "../network" }
-kasplex-reth-payload = { path = "../payload" }
-kasplex-reth-primitives = { path = "../primitives" }
-kasplex-reth-rpc = { path = "../rpc" }
-kasplex-reth-tx-mapping = { path = "../tx_mapping" }
-kasplex-reth-txpool = { path = "../txpool" }
-reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth" }
-reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum" }
-reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-api" }
-reth-node-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-builder" }
-reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-node-ethereum" }
-reth-provider = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-provider" }
-reth-engine-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-engine-primitives" }
-reth-ethereum-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-ethereum-primitives" }
-reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-rpc" }
-reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-primitives-traits" }
-reth-payload-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-payload-primitives" }
-reth-engine-local = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.10.1", package = "reth-engine-local" }
+kasplex-reth-block = { workspace = true }
+kasplex-reth-chainspec = { workspace = true }
+kasplex-reth-consensus = { workspace = true }
+kasplex-reth-network = { workspace = true }
+kasplex-reth-payload = { workspace = true }
+kasplex-reth-primitives = { workspace = true }
+kasplex-reth-rpc = { workspace = true }
+kasplex-reth-tx-mapping = { workspace = true }
+kasplex-reth-txpool = { workspace = true }
+reth = { workspace = true }
+reth-ethereum = { workspace = true }
+reth-node-api = { workspace = true }
+reth-node-builder = { workspace = true }
+reth-node-ethereum = { workspace = true }
+reth-provider = { workspace = true }
+reth-engine-primitives = { workspace = true }
+reth-ethereum-primitives = { workspace = true }
+reth-rpc = { workspace = true }
+reth-primitives-traits = { workspace = true }
+reth-payload-primitives = { workspace = true }
+reth-engine-local = { workspace = true }
 tokio-stream = { version = "0.1", features = [] }
 tracing = { workspace = true }
 tokio = { workspace = true }
